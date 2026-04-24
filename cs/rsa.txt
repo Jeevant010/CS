@@ -1,0 +1,139 @@
+import random
+import math
+import os
+
+# -------- GCD --------
+def gcd(a, b):
+    while b:
+        a, b = b, a % b
+    return a
+
+# -------- Modular Inverse --------
+def mod_inverse(e, phi):
+    for d in range(1, phi):
+        if (e * d) % phi == 1:
+            return d
+    return None
+
+# -------- Check Prime --------
+def is_prime(n):
+    if n < 2:
+        return False
+    for i in range(2, int(n**0.5) + 1):
+        if n % i == 0:
+            return False
+    return True
+
+# -------- Generate Prime --------
+def generate_prime():
+    while True:
+        p = random.randint(100, 300)
+        if is_prime(p):
+            return p
+
+# -------- KEY GENERATION --------
+def generate_keys():
+    p = generate_prime()
+    q = generate_prime()
+
+    while q == p:
+        q = generate_prime()
+
+    n = p * q
+    phi = (p - 1) * (q - 1)
+
+    # Choose e
+    e = random.randint(2, phi - 1)
+    while gcd(e, phi) != 1:
+        e = random.randint(2, phi - 1)
+
+    d = mod_inverse(e, phi)
+
+    print("\nPublic Key (e, n):", (e, n))
+    print("Private Key (d, n):", (d, n))
+
+    return (e, n), (d, n)
+
+# -------- ENCRYPT --------
+def encrypt_file(public_key):
+    if not os.path.exists("plaintext.txt"):
+        print("plaintext.txt not found!")
+        return
+
+    with open("plaintext.txt", "r") as f:
+        text = f.read()
+
+    e, n = public_key
+
+    cipher = []
+    for ch in text:
+        cipher_val = pow(ord(ch), e, n)
+        cipher.append(str(cipher_val))
+
+    cipher_text = " ".join(cipher)
+
+    with open("ciphertext.txt", "w") as f:
+        f.write(cipher_text)
+
+    print("Encryption done → ciphertext.txt")
+
+# -------- DECRYPT --------
+def decrypt_file(private_key):
+    if not os.path.exists("ciphertext.txt"):
+        print("ciphertext.txt not found!")
+        return
+
+    with open("ciphertext.txt", "r") as f:
+        data = f.read().split()
+
+    d, n = private_key
+
+    plain = ""
+    for num in data:
+        val = pow(int(num), d, n)
+        plain += chr(val)
+
+    with open("decryptedtext.txt", "w") as f:
+        f.write(plain)
+
+    print("Decryption done → decryptedtext.txt")
+
+
+# -------- MENU --------
+def main():
+    public_key = None
+    private_key = None
+
+    while True:
+        print("\n===== RSA Cipher =====")
+        print("1. Generate Keys")
+        print("2. Encrypt File")
+        print("3. Decrypt File")
+        print("0. Exit")
+
+        choice = input("Enter choice: ")
+
+        if choice == '1':
+            public_key, private_key = generate_keys()
+
+        elif choice == '2':
+            if public_key:
+                encrypt_file(public_key)
+            else:
+                print("Generate keys first!")
+
+        elif choice == '3':
+            if private_key:
+                decrypt_file(private_key)
+            else:
+                print("Generate keys first!")
+
+        elif choice == '0':
+            print("Program exited.")
+            break
+
+        else:
+            print("Invalid choice!")
+
+if __name__ == "__main__":
+    main()
