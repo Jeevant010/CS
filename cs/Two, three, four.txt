@@ -1,0 +1,324 @@
+Ceaser Cipher and Cryptal Analysis
+
+import collections
+
+def caesar_cipher(text, shift, mode='encrypt'):
+    """Performs both encryption and decryption based on the mode."""
+    result = ""
+    # For decryption, shift in the opposite direction
+    if mode == 'decrypt':
+        shift = -shift
+    
+    for char in text:
+        if char.isalpha():
+            start = ord('A') if char.isupper() else ord('a')
+            # Shift within the 26-letter alphabet range
+            result += chr((ord(char) - start + shift) % 26 + start)
+        else:
+            result += char
+    return result
+
+def brute_force_attack(ciphertext):
+    """Tries all 25 possible shifts to find the original message."""
+    print("\n--- Brute Force Results ---")
+    for shift in range(1, 26):
+        decrypted = caesar_cipher(ciphertext, shift, mode='decrypt')
+        print(f"Shift {shift:2}: {decrypted}")
+
+def frequency_analysis(ciphertext):
+    """Predicts the shift by comparing the most frequent letter to 'E'."""
+    # Filter only alphabetic characters and convert to uppercase
+    clean_text = "".join(filter(str.isalpha, ciphertext)).upper()
+    if not clean_text:
+        print("No alphabetic characters found for analysis.")
+        return
+
+    # Count occurrences and find the most frequent character
+    counts = collections.Counter(clean_text)
+    most_frequent_char = counts.most_common(1)[0][0]
+    
+    # Calculate shift assuming the most frequent letter in English is 'E' (index 4)
+    # Predicted Shift = (Most Frequent Char Index - 'E' Index) % 26
+    predicted_shift = (ord(most_frequent_char) - ord('E')) % 26
+    
+    print(f"\n--- Frequency Analysis Prediction ---")
+    print(f"Most frequent character found: '{most_frequent_char}'")
+    print(f"Predicted Shift used for encryption: {predicted_shift}")
+    print(f"Decrypted Message: {caesar_cipher(ciphertext, predicted_shift, mode='decrypt')}")
+
+def main():
+    while True:
+        print("\n=== Caesar Cipher Menu ===")
+        print("1. Encryption")
+        print("2. Decryption")
+        print("3. Brute Force Attack")
+        print("4. Frequency Analysis")
+        print("5. Exit")
+        
+        choice = input("Enter your choice (1-5): ")
+        
+        if choice == '1':
+            text = input("Enter Plaintext: ")
+            shift = int(input("Enter Shift Key (1-25): "))
+            print(f"Ciphertext: {caesar_cipher(text, shift, mode='encrypt')}")
+        elif choice == '2':
+            text = input("Enter Ciphertext: ")
+            shift = int(input("Enter Shift Key (1-25): "))
+            print(f"Plaintext: {caesar_cipher(text, shift, mode='decrypt')}")
+        elif choice == '3':
+            text = input("Enter Ciphertext to Crack: ")
+            brute_force_attack(text)
+        elif choice == '4':
+            text = input("Enter Ciphertext to Analyze: ")
+            frequency_analysis(text)
+        elif choice == '5':
+            print("Exiting program.")
+            break
+        else:
+            print("Invalid choice, please try again.")
+
+if __name__ == "__main__":
+    main()
+
+
+
+
+
+
+6X6 Playfair Cipher
+
+import numpy as np
+
+# Function to generate the 6x6 key matrix
+def generate_matrix(key):
+    key = key.upper().replace(" ", "")
+    # Combine key, alphabets, and numbers, removing duplicates
+    alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    key_string = ""
+    for char in key + alphabet:
+        if char not in key_string:
+            key_string += char
+    
+    # Fill the 6x6 matrix
+    matrix = []
+    for i in range(0, 36, 6):
+        matrix.append(list(key_string[i:i+6]))
+    return np.array(matrix)
+
+# Function to find position of a character
+def find_position(matrix, char):
+    for r in range(6):
+        for c in range(6):
+            if matrix[r][c] == char:
+                return r, c
+    return None
+
+# Function to preprocess text (padding)
+def preprocess_text(text, encrypt=True):
+    text = text.upper().replace(" ", "")
+    # Replace J with I if only 5x5, but not necessary for 6x6
+    # Create pairs, adding 'X' between identical letters
+    i = 0
+    prepared_text = ""
+    while i < len(text):
+        char1 = text[i]
+        prepared_text += char1
+        if i + 1 < len(text):
+            char2 = text[i+1]
+            if char1 == char2:
+                prepared_text += 'X' # Or '0' for numerical-heavy
+                i += 1
+            else:
+                prepared_text += char2
+                i += 2
+        else:
+            prepared_text += 'X'
+            i += 1
+    return prepared_text
+
+# Function to encrypt/decrypt pairs
+def process_pair(pair, matrix, mode='encrypt'):
+    r1, c1 = find_position(matrix, pair[0])
+    r2, c2 = find_position(matrix, pair[1])
+    
+    if r1 == r2: # Same row
+        shift = 1 if mode == 'encrypt' else -1
+        return matrix[r1][(c1 + shift) % 6] + matrix[r2][(c2 + shift) % 6]
+    elif c1 == c2: # Same column
+        shift = 1 if mode == 'encrypt' else -1
+        return matrix[(r1 + shift) % 6][c1] + matrix[(r2 + shift) % 6][c2]
+    else: # Rectangle
+        return matrix[r1][c2] + matrix[r2][c1]
+
+# Main Menu
+def main():
+    while True:
+        print("\n--- 6x6 Playfair Cipher Menu ---")
+        print("1. Encrypt")
+        print("2. Decrypt")
+        print("3. Exit")
+        choice = input("Enter choice (1-3): ")
+
+        if choice == '1' or choice == '2':
+            key = input("Enter key: ")
+            text = input("Enter text: ")
+            matrix = generate_matrix(key)
+            print("Generated Matrix:\n", matrix)
+            
+            prepared = preprocess_text(text)
+            result = ""
+            for i in range(0, len(prepared), 2):
+                pair = prepared[i:i+2]
+                result += process_pair(pair, matrix, 'encrypt' if choice == '1' else 'decrypt')
+            
+            print("Result:", result)
+        elif choice == '3':
+            break
+        else:
+            print("Invalid choice!")
+
+if __name__ == "__main__":
+    main()
+
+
+
+Hill Cipher
+
+import numpy as np
+
+def get_key_matrix(key_str, n):
+    """Converts a string key into an n x n matrix."""
+    key_str = key_str.upper().replace(" ", "")
+    key_matrix = []
+    for i in range(n):
+        row = []
+        for j in range(n):
+            row.append(ord(key_str[i * n + j]) % 65)
+        key_matrix.append(row)
+    return np.array(key_matrix)
+
+def matrix_mod_inverse(matrix, modulus):
+    """Calculates the modular inverse of a matrix under a given modulus."""
+    det = int(np.round(np.linalg.det(matrix)))
+    det_inv = pow(det, -1, modulus)  # Modular multiplicative inverse of determinant
+    
+    # Adjugate matrix = det * inverse_matrix
+    adjugate = np.round(det * np.linalg.inv(matrix)).astype(int)
+    
+    return (det_inv * adjugate) % modulus
+
+def encrypt(text, key_matrix, n):
+    text = text.upper().replace(" ", "")
+    # Padding with 'X' if text length is not a multiple of n
+    while len(text) % n != 0:
+        text += 'X'
+        
+    ciphertext = ""
+    for i in range(0, len(text), n):
+        block = []
+        for j in range(n):
+            block.append(ord(text[i + j]) % 65)
+        
+        block_vec = np.array(block)
+        result_vec = np.dot(key_matrix, block_vec) % 26
+        
+        for val in result_vec:
+            ciphertext += chr(int(val) + 65)
+            
+    return ciphertext
+
+def decrypt(ciphertext, key_matrix, n):
+    try:
+        inverse_matrix = matrix_mod_inverse(key_matrix, 26)
+    except ValueError:
+        return "Error: Key matrix is not invertible. Encryption cannot be reversed."
+
+    plaintext = ""
+    for i in range(0, len(ciphertext), n):
+        block = []
+        for j in range(n):
+            block.append(ord(ciphertext[i + j]) % 65)
+            
+        block_vec = np.array(block)
+        result_vec = np.dot(inverse_matrix, block_vec) % 26
+        
+        for val in result_vec:
+            plaintext += chr(int(round(val)) + 65)
+            
+    return plaintext
+
+def main():
+    print("--- Hill Cipher Program ---")
+    while True:
+        print("\n1. Encrypt")
+        print("2. Decrypt")
+        print("3. Exit")
+        choice = input("Select an option: ")
+
+        if choice == '3':
+            break
+
+        n = int(input("Enter matrix size (e.g., 2 for 2x2, 3 for 3x3): "))
+        key_str = input(f"Enter the key string (must be {n*n} characters): ")
+        
+        if len(key_str) != n*n:
+            print(f"Invalid key length! Must be exactly {n*n} characters.")
+            continue
+            
+        key_matrix = get_key_matrix(key_str, n)
+
+        if choice == '1':
+            text = input("Enter plaintext: ")
+            result = encrypt(text, key_matrix, n)
+            print(f"Encrypted Text: {result}")
+        elif choice == '2':
+            text = input("Enter ciphertext: ")
+            result = decrypt(text, key_matrix, n)
+            print(f"Decrypted Text: {result}")
+        else:
+            print("Invalid Choice!")
+
+if __name__ == "__main__":
+    main()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

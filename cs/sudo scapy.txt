@@ -1,0 +1,79 @@
+sudo scapy
+
+sudo apt update
+sudo apt install wireshark -y
+
+sudo wireshark
+
+
+Task 1 — ACK in response to SYN+ACK
+Host 172.16.1.10 received a TCP SYN+ACK from 10.10.10.11 with Seq=101, Ack=201. Send back an ACK.
+
+send(IP(src="172.16.1.10", dst="10.10.10.11")/
+     TCP(flags="A", seq=201, ack=102))
+Rule: reply's seq = received ack; reply's ack = received seq + 1 (SYN consumes 1 byte).
+
+Task 2 — Response with 10 bytes of data
+10.1.2.3 sent 100 bytes to 192.16.1.2 with Seq=9001, Ack=15001. Send back 10 bytes.
+
+send(IP(src="192.16.1.2", dst="10.1.2.3")/
+     TCP(flags="PA", seq=15001, ack=9101)/("A"*10))
+Reply seq = received ack; reply ack = received seq + payload length (100).
+
+Task 3 — ICMP with custom TTL + TCP port scan 1–1024
+send(IP(dst="172.16.2.231", ttl=245)/ICMP())
+sr(IP(dst="10.0.0.2")/TCP(dport=(1,1024), flags="S"))
+Task 4 — SYN scan on specific ports with spoofed source
+sr(IP(src="5.6.7.8", dst="1.2.3.4")/
+   TCP(dport=[22,80,21,443], flags="S"))
+Task 5 — TCP packet with shell payload
+send(IP(dst="147.125.1.15")/TCP()/"#!/bin/bash")
+Task 6 — ICMP echo-reply with TTL=128
+send(IP(src="10.1.1.100", dst="10.1.1.101", ttl=128)/
+     ICMP(type=0))
+type=0 = echo reply.
+
+Task 7 — TCP with FIN + PSH + URG flags
+send(IP(dst="192.168.1.10")/TCP(dport=666, flags="FPU"))
+Task 8 — ARP request (Layer 2)
+Uses sendp() because it's an Ethernet-level (L2) packet.
+
+sendp(Ether(src="aa:aa:aa:aa:aa:aa", dst="ff:ff:ff:ff:ff:ff")/
+      ARP(op=1, hwsrc="aa:aa:aa:aa:aa:aa",
+          psrc="172.16.15.100", pdst="172.16.15.200"))
+op=1 = ARP request; destination MAC is broadcast ff:ff:....
+
+Task 9 — SYN+ACK response to incoming SYN
+Web server 172.16.15.100 got a SYN from 172.16.15.200:4580. Reply with SYN+ACK.
+
+
+send(IP(src="172.16.15.100", dst="172.16.15.200")/
+     TCP(sport=80, dport=4580, flags="SA",
+         seq=1000, ack=<received_seq>+1))
+
+
+
+
+
+Only TCP traffic
+tcp
+Only ICMP
+icmp
+Only ARP
+arp
+By IP (either direction)
+ip.addr == X.X.X.X
+By source IP
+ip.src == X.X.X.X
+By destination IP
+ip.dst == X.X.X.X
+By TCP port
+tcp.port == 80
+By TCP flag (SYN)
+tcp.flags.syn == 1
+By TTL
+ip.ttl == 128
+Match payload text
+tcp contains "text"
+Combine conditions
+&& (AND), || (OR), ! (NOT)

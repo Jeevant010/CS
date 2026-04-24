@@ -1,0 +1,185 @@
+Rail fence cipher:
+
+def encrypt(text, key):
+    if key <= 1:
+        return text
+
+    rail = ['' for _ in range(key)]
+    row = 0
+    direction = 1
+
+    for char in text:
+        rail[row] += char
+        row += direction
+
+        if row == 0 or row == key - 1:
+            direction *= -1
+
+    return ''.join(rail)
+
+
+def decrypt(cipher, key):
+    if key <= 1:
+        return cipher
+
+    pattern = []
+    row = 0
+    direction = 1
+
+    for _ in cipher:
+        pattern.append(row)
+        row += direction
+        if row == 0 or row == key - 1:
+            direction *= -1
+
+    rail_lengths = [pattern.count(i) for i in range(key)]
+
+    rails = []
+    index = 0
+    for length in rail_lengths:
+        rails.append(cipher[index:index + length])
+        index += length
+
+    result = []
+    rail_index = [0] * key
+
+    for r in pattern:
+        result.append(rails[r][rail_index[r]])
+        rail_index[r] += 1
+
+    return ''.join(result)
+
+
+while True:
+    print("\n1. Encryption")
+    print("2. Decryption")
+    print("3. Exit")
+
+    choice = int(input("Enter Choice: "))
+
+    if choice == 1:
+        key = int(input("Enter Key: "))
+        with open("Plaintext.txt", "r", encoding="utf-8") as f:
+            plaintext = f.read()
+
+        ciphertext = encrypt(plaintext, key)
+
+        with open("Cipher.txt", "w", encoding="utf-8") as f:
+            f.write(ciphertext)
+
+        print("Encryption Completed")
+
+    elif choice == 2:
+        key = int(input("Enter Key: "))
+        with open("Cipher.txt", "r", encoding="utf-8") as f:
+            cipher = f.read()
+
+        decrypted = decrypt(cipher, key)
+
+        with open("Recover.txt", "w", encoding="utf-8") as f:
+            f.write(decrypted)
+
+        print("Decryption Completed.")
+
+    elif choice == 3:
+        break
+
+    else:
+        print("Invalid Choice")
+
+
+
+ Columnar Transition cipher
+
+
+import math
+import os
+
+def encryptMessage(msg, key):
+    cipher = ""
+    col = len(key)
+    msg_len = float(len(msg))
+    row = int(math.ceil(msg_len / col))
+
+    fill_null = int((row * col) - msg_len)
+    msg += '_' * fill_null
+
+    matrix = [msg[i: i + col] for i in range(0, len(msg), col)]
+
+    key_order = sorted([(char, i) for i, char in enumerate(key)])
+
+    for char, curr_idx in key_order:
+        cipher += ''.join([matrix[r][curr_idx] for r in range(row)])
+
+    return cipher
+
+
+def decryptMessage(cipher, key):
+    col = len(key)
+    msg_len = float(len(cipher))
+    row = int(math.ceil(msg_len / col))
+
+    key_order = sorted([(char, i) for i, char in enumerate(key)])
+
+    dec_cipher = [[''] * col for _ in range(row)]
+    msg_indx = 0
+
+    for char, curr_idx in key_order:
+        for j in range(row):
+            dec_cipher[j][curr_idx] = cipher[msg_indx]
+            msg_indx += 1
+
+    msg = ''.join(sum(dec_cipher, []))
+    return msg.rstrip('_')
+
+
+def main():
+    while True:
+        print("1. Encryption")
+        print("2. Decryption")
+        print("3. Exit")
+
+        choice = input("Enter your choice: ")
+
+        if choice == '1':
+            if not os.path.exists("plaintext.txt"):
+                print("\n'plaintext.txt' not found!")
+                continue
+
+            with open("plaintext.txt", "r") as file:
+                plaintext = file.read()
+
+            key = input("Enter Key Value: ")
+            encrypted_text = encryptMessage(plaintext, key)
+
+            with open("cipher.txt", "w") as file:
+                file.write(encrypted_text)
+
+            print("\nEncrypted")
+
+        elif choice == '2':
+            if not os.path.exists("cipher.txt"):
+                print("\n'cipher.txt' not found!")
+                continue
+
+            with open("cipher.txt", "r") as file:
+                ciphertext = file.read()
+
+            key = input("Enter Key Value: ")
+            decrypted_text = decryptMessage(ciphertext, key)
+
+            with open("recover.txt", "w") as file:
+                file.write(decrypted_text)
+
+            print("\nDecrypted text written to 'recover.txt'.")
+
+        elif choice == '3':
+            print("\nExit")
+            break
+
+        else:
+            print("\nInvalid choice!")
+
+
+if __name__ == '__main__':
+    main()

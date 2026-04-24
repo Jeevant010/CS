@@ -1,0 +1,86 @@
+0. One-time setup (Ubuntu/Kali)
+sudo apt update
+sudo apt install snort -y
+Key files/paths:
+
+Rules file: /etc/snort/rules/local.rules
+Main config: /etc/snort/snort.conf
+Find your interface: ip a (e.g. eth0, ens33, wlan0)
+Open the local rules file to add your custom rules:
+
+sudo nano /etc/snort/rules/local.rules
+Make sure snort.conf includes it (it does by default):
+
+include $RULE_PATH/local.rules
+General run command (used for every task)
+Run Snort in console alert mode on your interface:
+
+sudo snort -A console -q -c /etc/snort/snort.conf -i <iface>
+Then, in another terminal, generate the traffic that should trigger the rule (browser, nmap, hping3, curl, etc.). Watch alerts print in the first terminal.
+
+Stop Snort with Ctrl+C.
+
+1. Detect browsing to craigslist.org
+Add to local.rules:
+
+alert tcp any any -> any any (msg:"Craigslist Outbound Request"; content:"craigslist.org"; nocase; sid:1000002; rev:2;)
+Run Snort, then in a browser visit http://craigslist.org. Alert should fire.
+
+2. Port-scan detection rules
+Add all of these to local.rules:
+
+alert tcp  any any -> any any (msg:"SYN Scan Detected";  flags:S;    sid:1000003; rev:1;)
+alert udp  any any -> any any (msg:"UDP Scan Detected";              sid:1000004; rev:1;)
+alert icmp any any -> any any (msg:"PING Scan Detected"; itype:8;    sid:1000005; rev:1;)
+alert tcp  any any -> any any (msg:"FIN Scan Detected";  flags:F;    sid:1000006; rev:1;)
+alert tcp  any any -> any any (msg:"NULL Scan Detected"; flags:0;    sid:1000007; rev:1;)
+alert tcp  any any -> any any (msg:"XMAS Scan Detected"; flags:FPU;  sid:1000008; rev:1;)
+alert tcp  any any -> any any (msg:"TCP Full Connect Scan"; flags:S,A; sid:1000009; rev:1;)
+Generate the traffic from another machine (or VM) with nmap against the Snort box IP:
+
+sudo nmap -sS <target>        # SYN scan
+sudo nmap -sU <target>        # UDP scan
+ping <target>                 # PING
+sudo nmap -sF <target>        # FIN
+sudo nmap -sN <target>        # NULL
+sudo nmap -sX <target>        # XMAS
+sudo nmap -sT <target>        # TCP connect
+3. SQL injection
+alert tcp any any -> any any (msg:"SQL Injection Attempt"; content:"' OR 1=1"; nocase; sid:1000010; rev:2;)
+Trigger it:
+
+curl "http://<victim>/login.php?user=admin'%20OR%201=1--"
+4. XSS
+alert tcp any any -> any any (msg:"XSS Attempt"; content:"<script>"; nocase; sid:1000011; rev:2;)
+Trigger:
+
+curl "http://<victim>/search?q=<script>alert(1)</script>"
+5. SYN flood (threshold 5–20)
+alert tcp any any -> any any (msg:"SYN Flood Detected"; flags:S; detection_filter:track by_dst, count 15, seconds 10; sid:1000012; rev:1;)
+Trigger with hping3:
+
+sudo hping3 -S -p 80 --flood <target>
+6. UDP flood
+alert udp any any -> any any (msg:"UDP Flood Detected"; detection_filter:track by_dst, count 10, seconds 10; sid:1000013; rev:2;)
+Trigger:
+
+sudo hping3 --udp -p 53 --flood <target>
+7. Email with .exe attachment (SMTP port 25)
+alert tcp any any -> any 25 (msg:"Email with .exe Attachment Detected"; content:".exe"; nocase; sid:1000014; rev:1;)
+Trigger by sending mail that references a .exe via SMTP, e.g. using swaks or a telnet session to port 25.
+
+8. FTP (plaintext) usage
+alert tcp any any -> any 21 (msg:"FTP Plaintext Protocol Usage"; sid:1000015; rev:1;)
+Trigger:
+
+ftp <target>
+9. BitTorrent traffic
+alert tcp any any -> any any (msg:"BitTorrent Traffic Detected"; content:"BitTorrent protocol"; sid:1000016; rev:1;)
+Trigger: start any BitTorrent client / open a .torrent.
+
+10. SSH brute force (>3 attempts in 60 s)
+alert tcp any any -> any 22 (msg:"SSH Brute Force Attempt"; flags:S; detection_filter:track by_src, count 3, seconds 60; sid:1000017; rev:1;)
+Trigger with hydra or a loop of bad SSH logins:
+
+
+for i in 1 2 3 4; do ssh baduser@<target>; done

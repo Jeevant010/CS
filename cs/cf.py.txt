@@ -1,0 +1,93 @@
+import os
+from collections import Counter
+
+# -------- ENCRYPTION --------
+def encrypt(text, key):
+    key = key % 256
+    return ''.join(chr((ord(c) + key) % 256) for c in text)
+
+
+# -------- DECRYPTION --------
+def decrypt(cipher, key):
+    key = key % 256
+    return ''.join(chr((ord(c) - key) % 256) for c in cipher)
+
+
+# -------- BRUTE FORCE --------
+def brute_force(cipher):
+    print("\nTrying all possible keys...\n")
+    for key in range(256):
+        text = decrypt(cipher, key)
+        print(f"Key {key}: {text[:50]}")  # show first 50 chars
+
+
+# -------- FREQUENCY ANALYSIS --------
+def frequency_analysis(cipher):
+    freq = Counter(cipher)
+    print("\nCharacter Frequencies:\n")
+    for char, count in freq.most_common(10):
+        print(f"{repr(char)} : {count}")
+
+
+# -------- FILE HANDLING --------
+def read_file(filename):
+    if not os.path.exists(filename):
+        print("File not found!")
+        return None
+    with open(filename, 'r') as f:
+        return f.read()
+
+
+def write_file(filename, data):
+    with open(filename, 'w') as f:
+        f.write(data)
+
+
+# -------- MENU --------
+def main():
+    while True:
+        print("\n===== Caesar Cipher Menu =====")
+        print("1. Encryption")
+        print("2. Decryption")
+        print("3. Brute Force Attack")
+        print("4. Frequency Analysis")
+        print("0. Exit")
+
+        choice = input("Enter choice: ")
+
+        if choice == '1':
+            text = read_file("plaintext.txt")
+            if text:
+                key = int(input("Enter key: "))
+                cipher = encrypt(text, key)
+                write_file("ciphertext.txt", cipher)
+                print("Encryption done → ciphertext.txt")
+
+        elif choice == '2':
+            cipher = read_file("ciphertext.txt")
+            if cipher:
+                key = int(input("Enter key: "))
+                plain = decrypt(cipher, key)
+                write_file("decryptedtext.txt", plain)
+                print("Decryption done → decryptedtext.txt")
+
+        elif choice == '3':
+            cipher = read_file("ciphertext.txt")
+            if cipher:
+                brute_force(cipher)
+
+        elif choice == '4':
+            cipher = read_file("ciphertext.txt")
+            if cipher:
+                frequency_analysis(cipher)
+
+        elif choice == '0':
+            print("Program exited.")
+            break
+
+        else:
+            print("Invalid choice!")
+
+
+if __name__ == "__main__":
+    main()

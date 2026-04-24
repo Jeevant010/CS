@@ -1,0 +1,167 @@
+import string
+
+# -------- NORMALIZE (keep only A-Z, 0-9) --------
+def normalize(msg):
+    result = []
+    for ch in msg:
+        if ch.isalnum():
+            result.append(ch.upper())
+    return "".join(result)
+
+
+# -------- BUILD 6x6 MATRIX --------
+def build_key_matrix(secret):
+    secret = normalize(secret)
+
+    symbols = string.ascii_uppercase + string.digits  # 36 chars
+    used = ""
+
+    # Add key characters first
+    for ch in secret:
+        if ch not in used:
+            used += ch
+
+    # Fill remaining characters
+    for ch in symbols:
+        if ch not in used:
+            used += ch
+
+    # Create 6x6 matrix
+    matrix = []
+    pos = 0
+
+    print("\nKey Matrix:")
+    for _ in range(6):
+        row = list(used[pos:pos+6])
+        matrix.append(row)
+        pos += 6
+        print(row)
+    print()
+
+    return matrix
+
+
+# -------- FIND POSITION --------
+def locate(matrix, char):
+    for r in range(6):
+        for c in range(6):
+            if matrix[r][c] == char:
+                return r, c
+
+
+# -------- CREATE PAIRS --------
+def generate_digrams(text):
+    pairs = []
+    i = 0
+
+    while i < len(text):
+        first = text[i]
+
+        if i + 1 < len(text):
+            second = text[i + 1]
+
+            if first == second:
+                pairs.append(first + "X")
+                i += 1
+            else:
+                pairs.append(first + second)
+                i += 2
+        else:
+            pairs.append(first + "X")
+            i += 1
+
+    print("Generated pairs:", pairs, "\n")
+    return pairs
+
+
+# -------- ENCRYPT --------
+def encrypt(key):
+    matrix = build_key_matrix(key)
+
+    with open("plaintext.txt", "r") as f:
+        data = normalize(f.read())
+
+    pairs = generate_digrams(data)
+
+    encrypted = ""
+
+    for p in pairs:
+        r1, c1 = locate(matrix, p[0])
+        r2, c2 = locate(matrix, p[1])
+
+        if r1 == r2:
+            encrypted += matrix[r1][(c1 + 1) % 6]
+            encrypted += matrix[r2][(c2 + 1) % 6]
+
+        elif c1 == c2:
+            encrypted += matrix[(r1 + 1) % 6][c1]
+            encrypted += matrix[(r2 + 1) % 6][c2]
+
+        else:
+            encrypted += matrix[r1][c2]
+            encrypted += matrix[r2][c1]
+
+    with open("cipher.txt", "w") as f:
+        f.write(encrypted)
+
+    print("Encryption done! Output saved in cipher.txt")
+
+
+# -------- DECRYPT --------
+def decrypt(key):
+    matrix = build_key_matrix(key)
+
+    with open("cipher.txt", "r") as f:
+        data = normalize(f.read())
+
+    # NOTE: For decryption, we split directly into pairs (no X insertion)
+    pairs = [data[i:i+2] for i in range(0, len(data), 2)]
+
+    decrypted = ""
+
+    for p in pairs:
+        r1, c1 = locate(matrix, p[0])
+        r2, c2 = locate(matrix, p[1])
+
+        if r1 == r2:
+            decrypted += matrix[r1][(c1 - 1) % 6]
+            decrypted += matrix[r2][(c2 - 1) % 6]
+
+        elif c1 == c2:
+            decrypted += matrix[(r1 - 1) % 6][c1]
+            decrypted += matrix[(r2 - 1) % 6][c2]
+
+        else:
+            decrypted += matrix[r1][c2]
+            decrypted += matrix[r2][c1]
+
+    with open("recover.txt", "w") as f:
+        f.write(decrypted)
+
+    print("Decryption done! Output saved in recover.txt")
+
+
+# -------- MENU --------
+if __name__ == "__main__":
+    key = input("Enter key: ")
+
+    while True:
+        print("\n===== 6x6 Playfair Cipher =====")
+        print("1. Encrypt file")
+        print("2. Decrypt file")
+        print("3. Exit")
+
+        ch = input("Choose option: ")
+
+        if ch == "1":
+            encrypt(key)
+
+        elif ch == "2":
+            decrypt(key)
+
+        elif ch == "3":
+            print("Program terminated.")
+            break
+
+        else:
+            print("Wrong choice!")
